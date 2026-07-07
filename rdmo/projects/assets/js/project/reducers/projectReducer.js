@@ -38,6 +38,7 @@ export default function projectReducer(state = initialState, action) {
     case actionTypes.FETCH_ANSWERS_INIT:
     case actionTypes.FETCH_VIEW_INIT:
     case actionTypes.FETCH_PROJECT_VISIBILITY_INIT:
+    case actionTypes.FETCH_PROJECT_FILES_INIT:
     case actionTypes.CLEAR_PROJECT_ERRORS:
       return clearErrors(state)
     // ERROR actions - append error
@@ -58,6 +59,7 @@ export default function projectReducer(state = initialState, action) {
     case actionTypes.FETCH_ANSWERS_ERROR:
     case actionTypes.FETCH_VIEW_ERROR:
     case actionTypes.FETCH_PROJECT_VISIBILITY_ERROR:
+    case actionTypes.FETCH_PROJECT_FILES_ERROR:
       return appendError(state, action)
     case actionTypes.FETCH_PROJECT_SUCCESS:
       return { ...state, project: action.project }
@@ -150,6 +152,14 @@ export default function projectReducer(state = initialState, action) {
       return {
         ...state,
         currentView: null
+      }
+    case actionTypes.FETCH_PROJECT_FILES_SUCCESS:
+      return {
+        ...state,
+        project: {
+          ...state.project,
+          files: action.files
+        }
       }
     case actionTypes.FETCH_PROJECT_VISIBILITY_SUCCESS:
       return {

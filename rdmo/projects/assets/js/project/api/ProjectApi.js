@@ -144,7 +144,11 @@ export default class ProjectApi extends BaseApi {
     }
   }
 
-  static fetchProjectFiles(projectId) {
-    return this.get(`/api/v1/projects/projects/${projectId}/files/`)
+  static fetchProjectFiles(projectId, snapshotId) {
+    if (isNil(snapshotId)) {
+      return this.get(`/api/v1/projects/projects/${projectId}/files/`)
+    } else {
+      return this.get(`/api/v1/projects/projects/${projectId}/snapshots/${snapshotId}/files/`)
+    }
   }
 }
