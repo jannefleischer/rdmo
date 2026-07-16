@@ -10,6 +10,10 @@ class ManagementApi extends BaseApi {
     return this.upload('/api/v1/management/upload/', file)
   }
 
+  static uploadZipFile(file) {
+    return this.upload('/api/v1/management/upload-zip/', file)
+  }
+
   static importElements(elements) {
     return this.post('/api/v1/management/import/', { elements })
   }

@@ -35,6 +35,22 @@ export function uploadFileError(error) {
   return {type: 'import/uploadFileError', error}
 }
 
+// upload zip file
+
+export function uploadZipFile(file) {
+  const pendingId = 'uploadFile'
+
+  return function(dispatch) {
+    dispatch(addToPending(pendingId))
+    dispatch(uploadFileInit(file))
+
+    return ManagementApi.uploadZipFile(file)
+      .then(elements => dispatch(uploadFileSuccess(elements)))
+      .catch(error => dispatch(uploadFileError(error)))
+      .finally(() => dispatch(removeFromPending(pendingId)))
+  }
+}
+
 // import elements
 
 export function importElements() {

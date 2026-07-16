@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import isNil from 'lodash/isNil'
 
-const UploadForm = ({ onSubmit }) => {
+const UploadForm = ({ onSubmit, accept = '.xml' }) => {
   const [file, setFile] = useState(null)
 
   const handleSubmit = event => {
@@ -14,7 +14,7 @@ const UploadForm = ({ onSubmit }) => {
     <form className="upload-form sidebar-form" onSubmit={handleSubmit}>
       <div className="upload-form-field">
         <input type="file" name="uploaded_file" aria-label={gettext('Upload file')}
-               onChange={event => setFile(event.target.files[0])} accept=".xml" />
+               onChange={event => setFile(event.target.files[0])} accept={accept} />
         <p>{file ? file.name : gettext('Select file')}</p>
       </div>
 
@@ -30,7 +30,8 @@ const UploadForm = ({ onSubmit }) => {
 }
 
 UploadForm.propTypes = {
-  onSubmit: PropTypes.func.isRequired
+  onSubmit: PropTypes.func.isRequired,
+  accept: PropTypes.string
 }
 
 export { UploadForm }

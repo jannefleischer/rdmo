@@ -12,7 +12,7 @@ from rest_framework.serializers import ValidationError
 from rdmo.core.imports import handle_uploaded_file
 from rdmo.core.permissions import CanToggleElementCurrentSite, HasPermission
 from rdmo.core.utils import get_model_field_meta, is_truthy
-from rdmo.core.xml import parse_xml_to_elements
+from rdmo.core.xml import parse_xml_to_elements, parse_zip_to_elements
 
 from .constants import RDMO_MODEL_PATH_MAPPER
 from .imports import import_elements
@@ -46,6 +46,41 @@ class UploadViewSet(viewsets.ViewSet):
             xml_parsed_elements, errors = parse_xml_to_elements(xml_file=import_tmpfile_name)
         except ValidationError as e:
             logger.info('Import failed with XML parsing errors.')
+            raise ValidationError({'file': e}) from e
+
+        # step 7: check if valid
+        if errors:
+            _str_errors = ", ".join(map(str, errors))
+            logger.info('Import failed with XML validation errors. %s', _str_errors)
+            raise ValidationError({'file': errors})
+
+        # step 8: import the elements if save=True is set
+        imported_elements = import_elements(xml_parsed_elements,
+                                            save=is_truthy(request.POST.get('import')),
+                                            request=request)
+
+        # step 9: return the list of, json-serializable, elements
+        return Response(imported_elements)
+
+
+class UploadZipViewSet(viewsets.ViewSet):
+    permission_classes = [HasPermission]
+    permission_required = 'management.upload_files'
+
+    def create(self, request, *args, **kwargs):
+        # step 1: store zip file as tmp file
+        try:
+            uploaded_file = request.FILES['file']
+        except KeyError as e:
+            raise ValidationError({'file': [_('This field may not be blank.')]}) from e
+        else:
+            import_tmpfile_name = handle_uploaded_file(uploaded_file, suffix='.zip')
+        try:
+            # step 1.1: initialize parse_zip_to_elements
+            # step 2-6: extract the zip, parse all contained xml files, merge and convert to elements
+            xml_parsed_elements, errors = parse_zip_to_elements(zip_file=import_tmpfile_name)
+        except ValidationError as e:
+            logger.info('Import failed with ZIP parsing errors.')
             raise ValidationError({'file': e}) from e
 
         # step 7: check if valid

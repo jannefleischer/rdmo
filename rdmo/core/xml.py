@@ -1,5 +1,7 @@
 import logging
 import re
+import tempfile
+import zipfile
 from collections import OrderedDict
 from pathlib import Path
 from xml.etree.ElementTree import Element as xmlElement
@@ -17,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 LEGACY_RDMO_XML_VERSION = '1.11.0'
 ELEMENTS_USING_KEY = {RDMO_MODELS['attribute']}
+
+# safety limits for the extraction of zip archives uploaded via the management import
+ZIP_MAX_XML_FILES = 500
+ZIP_MAX_UNCOMPRESSED_SIZE = 100 * 1024 * 1024  # 100 MB
 
 
 def resolve_file(file_name: str) -> tuple[Path | None, str | None]:
@@ -150,6 +156,72 @@ def parse_xml_to_elements(xml_file=None) -> tuple[OrderedDict, list]:
     # ordering of elements is done in the import_elements function
 
     logger.info('XML parsing of %s success (length: %s).', file.name, len(elements))
+
+    return elements, errors
+
+
+def parse_zip_to_elements(zip_file=None) -> tuple[OrderedDict, list]:
+    """Extract all XML files from a zip archive and merge them into a single, ordered dict of elements.
+
+    Files are read in alphabetical path order to keep the result deterministic when the same uri
+    is defined in more than one file (later files win). The actual dependency order between
+    elements (e.g. a question referencing an attribute) is resolved later by order_elements(),
+    regardless of which file each element came from - so the on-disk folder layout of the zip
+    does not need to encode the RDMO import order itself.
+    """
+
+    errors = []
+    elements = OrderedDict()
+
+    file, file_error = resolve_file(zip_file)
+    if file_error is not None:
+        logger.error(file_error)
+        errors.append(file_error)
+        return OrderedDict(), errors
+
+    try:
+        zf = zipfile.ZipFile(file)
+    except zipfile.BadZipFile:
+        error = _('This file is not a valid ZIP archive.')
+        logger.error(error)
+        errors.append(error)
+        return OrderedDict(), errors
+
+    with zf:
+        infolist = [info for info in zf.infolist()
+                    if not info.is_dir() and info.filename.lower().endswith('.xml')]
+
+        if not infolist:
+            error = _('The ZIP archive does not contain any XML files.')
+            logger.error(error)
+            errors.append(error)
+            return OrderedDict(), errors
+
+        if len(infolist) > ZIP_MAX_XML_FILES:
+            error = _('The ZIP archive contains too many XML files (max %(max)s).') % {'max': ZIP_MAX_XML_FILES}
+            logger.error(error)
+            errors.append(error)
+            return OrderedDict(), errors
+
+        total_size = sum(info.file_size for info in infolist)
+        if total_size > ZIP_MAX_UNCOMPRESSED_SIZE:
+            error = _('The ZIP archive is too large when uncompressed.')
+            logger.error(error)
+            errors.append(error)
+            return OrderedDict(), errors
+
+        infolist.sort(key=lambda info: info.filename)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for info in infolist:
+                extracted_path = zf.extract(info, tmpdir)
+
+                file_elements, file_errors = parse_xml_to_elements(xml_file=extracted_path)
+                if file_errors:
+                    errors.extend(f'{info.filename}: {error}' for error in file_errors)
+                    continue
+
+                elements.update(file_elements)
 
     return elements, errors
 

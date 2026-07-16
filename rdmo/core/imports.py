@@ -31,8 +31,8 @@ class ImportElementFields(str, Enum):
     CHANGED_FIELDS = "changedFields"  # for ignored_keys when ordering at save
 
 
-def handle_uploaded_file(filedata):
-    tempfilename = generate_tempfile_name()
+def handle_uploaded_file(filedata, suffix='.xml'):
+    tempfilename = generate_tempfile_name(suffix=suffix)
     with open(tempfilename, 'wb+') as destination:
         for chunk in filedata.chunks():
             destination.write(chunk)
@@ -46,10 +46,10 @@ def handle_fetched_file(filedata):
     return tempfilename
 
 
-def generate_tempfile_name():
+def generate_tempfile_name(suffix='.xml'):
     t = round(time.time() * 1000)
     r = randint(10000, 99999)
-    fn = pj(tempfile.gettempdir(), 'upload_' + str(t) + '_' + str(r) + '.xml')
+    fn = pj(tempfile.gettempdir(), 'upload_' + str(t) + '_' + str(r) + suffix)
     return fn
 
 

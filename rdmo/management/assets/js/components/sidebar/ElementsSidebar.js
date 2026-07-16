@@ -135,6 +135,12 @@ const ElementsSidebar = ({ config, elements, elementActions, importActions }) =>
       </p>
 
       <UploadForm onSubmit={file => importActions.uploadFile(file)} />
+
+      <p className="text-muted">
+        {gettext('Import a ZIP archive containing multiple RDMO XML files.')}
+      </p>
+
+      <UploadForm onSubmit={file => importActions.uploadZipFile(file)} accept=".zip" />
     </div>
   )
 }
